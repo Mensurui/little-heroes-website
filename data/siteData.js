@@ -128,10 +128,11 @@ export const siteData = {
     title: "Amazing Activities Done By Our Kids",
     categories: [
       "All",
-      "Outdoor Play",
+      "Events",
+      "Outdoor",
       "Classroom",
       "Arts & Crafts",
-      "Events",
+      "Outdoor Play",
       "Special Moments",
     ],
     items: [

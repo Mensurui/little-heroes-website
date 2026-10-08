@@ -13,6 +13,20 @@ export function resolveImageUrl(url) {
   return `${FRAPPE_BASE_URL}/${cleanUrl}`;
 }
 
+function parsePrimaryCategory(cats) {
+  if (!cats) return "General";
+  if (typeof cats === "string") return cats;
+  if (Array.isArray(cats)) {
+    if (cats.length === 0) return "General";
+    const first = cats[0];
+    if (typeof first === "object" && first !== null) {
+      return first.category || "General";
+    }
+    return String(first || "General");
+  }
+  return "General";
+}
+
 export async function fetchWebsiteGalleryImages({
   category = "All",
   page = 1,
@@ -63,7 +77,7 @@ export async function fetchWebsiteGalleryImages({
     const items = rawItems.map((item, idx) => ({
       id: item.name || `gallery-${idx}`,
       title: item.image_title || "Daycare Activity",
-      category: item.image_categories || "General",
+      category: parsePrimaryCategory(item.image_categories),
       image: resolveImageUrl(item.gallery_image),
       caption: item.image_caption || "",
       isLive: true,
