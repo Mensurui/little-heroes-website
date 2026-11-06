@@ -30,6 +30,16 @@ export const metadata = {
     "Kazanchis childcare",
     "early childhood education Ethiopia",
   ],
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
   openGraph: {
     title: "Little Heroes | Where Care Sparks Growth",
     description: "Premium Early Childhood Education & Daycare in Kazanchis, Addis Ababa.",
