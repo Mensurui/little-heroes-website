@@ -7,17 +7,23 @@ import { siteData } from "@/data/siteData";
 import { X, Loader2 } from "lucide-react";
 import { fetchWebsiteGalleryImages } from "@/services/galleryService";
 
-export default function Gallery() {
+export default function Gallery({ initialItems = [] }) {
   const { gallery } = siteData;
+  const hasInitial = Array.isArray(initialItems) && initialItems.length > 0;
   const [activeCategory, setActiveCategory] = useState("All");
   const [selectedImage, setSelectedImage] = useState(null);
-  const [items, setItems] = useState(gallery.items);
+  const [items, setItems] = useState(hasInitial ? initialItems : gallery.items);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadGallery() {
+      // If we already have initial items and we're looking at 'All', no need to re-fetch
+      if (activeCategory === "All" && hasInitial && items.length > 0) {
+        return;
+      }
+
       setIsLoading(true);
       try {
         const res = await fetchWebsiteGalleryImages({
@@ -29,16 +35,20 @@ export default function Gallery() {
         } else {
           const fallback =
             activeCategory === "All"
-              ? gallery.items
-              : gallery.items.filter((item) => item.category === activeCategory);
+              ? (hasInitial ? initialItems : gallery.items)
+              : (hasInitial ? initialItems : gallery.items).filter(
+                  (item) => item.category === activeCategory
+                );
           setItems(fallback);
         }
       } catch {
         if (!isMounted) return;
         const fallback =
           activeCategory === "All"
-            ? gallery.items
-            : gallery.items.filter((item) => item.category === activeCategory);
+            ? (hasInitial ? initialItems : gallery.items)
+            : (hasInitial ? initialItems : gallery.items).filter(
+                (item) => item.category === activeCategory
+              );
         setItems(fallback);
       } finally {
         if (isMounted) setIsLoading(false);
@@ -50,7 +60,7 @@ export default function Gallery() {
     return () => {
       isMounted = false;
     };
-  }, [activeCategory, gallery.items]);
+  }, [activeCategory, gallery.items, hasInitial, initialItems]);
 
   return (
     <section id="gallery" className="pt-6 pb-16 lg:pt-8 lg:pb-24 bg-white dark:bg-[#0B1120] transition-colors duration-300 overflow-hidden">

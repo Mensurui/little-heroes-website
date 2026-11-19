@@ -5,8 +5,26 @@ import Educators from "@/components/Educators";
 import Gallery from "@/components/Gallery";
 import BlogSection from "@/components/BlogSection";
 import BookingContact from "@/components/BookingContact";
+import { fetchPublishedNewsletters } from "@/services/blogService";
+import { fetchWebsiteGalleryImages } from "@/services/galleryService";
+import { siteData } from "@/data/siteData";
 
-export default function Home() {
+export default async function Home() {
+  const [newslettersRes, galleryRes] = await Promise.all([
+    fetchPublishedNewsletters().catch(() => ({ success: false, items: [] })),
+    fetchWebsiteGalleryImages({ category: "All" }).catch(() => ({ success: false, items: [] })),
+  ]);
+
+  const initialArticles =
+    newslettersRes.success && newslettersRes.items?.length > 0
+      ? newslettersRes.items
+      : siteData.blog.articles;
+
+  const initialGalleryItems =
+    galleryRes.success && galleryRes.items?.length > 0
+      ? galleryRes.items
+      : siteData.gallery.items;
+
   return (
     <>
       {/* 1. Hero Section: "Where Care Sparks Growth" */}
@@ -22,10 +40,10 @@ export default function Home() {
       <Educators />
 
       {/* 5. Photo Gallery Section: "Amazing Activities Done By Our Kids" */}
-      <Gallery />
+      <Gallery initialItems={initialGalleryItems} />
 
       {/* 6. Social Banner & Latest Media / Blogs */}
-      <BlogSection />
+      <BlogSection initialArticles={initialArticles} />
 
       {/* 7. Booking Form & Contact Details */}
       <BookingContact />

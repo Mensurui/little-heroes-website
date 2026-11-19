@@ -2,7 +2,7 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { fetchNewsletterByName } from "@/services/blogService";
+import { fetchNewsletterByName, fetchPublishedNewsletters } from "@/services/blogService";
 import { siteData } from "@/data/siteData";
 import ExpandableArticleContent from "@/components/ExpandableArticleContent";
 import WavyCard from "@/components/ui/WavyCard";
@@ -34,9 +34,18 @@ export default async function BlogPostPage({ params }) {
 
   const { article } = res;
 
-  // Filter out current article for related stories
-  const relatedArticles = siteData.blog.articles
-    .filter((a) => String(a.id) !== String(article.id) && a.slug !== resolvedParams.id)
+  // Filter out current article for related stories from live newsletters or fallback
+  const allPostsRes = await fetchPublishedNewsletters().catch(() => ({ items: [] }));
+  const candidatePool =
+    allPostsRes?.items?.length > 0 ? allPostsRes.items : siteData.blog.articles;
+
+  const relatedArticles = candidatePool
+    .filter(
+      (a) =>
+        String(a.id) !== String(article.id) &&
+        a.slug !== resolvedParams.id &&
+        a.name !== resolvedParams.id
+    )
     .slice(0, 3);
 
   return (

@@ -33,6 +33,30 @@ export async function fetchWebsiteGalleryImages({
   pageSize = 24,
   timeoutMs = 7000,
 } = {}) {
+  const isClient = typeof window !== "undefined";
+
+  if (isClient) {
+    try {
+      const url = new URL("/api/gallery", window.location.origin);
+      if (category && category !== "All") {
+        url.searchParams.append("category", category);
+      }
+      url.searchParams.append("page", String(page));
+      url.searchParams.append("pageSize", String(pageSize));
+
+      const res = await fetch(url.toString(), {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err) {
+      return { success: false, items: [], error: err.message, isFallback: true };
+    }
+    return { success: false, items: [], isFallback: true };
+  }
+
   const url = new URL(
     `${FRAPPE_BASE_URL}/api/method/little_heroes.api.v1.website_gallery_images.list_website_gallery_images`
   );
