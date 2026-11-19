@@ -1,5 +1,6 @@
 import Gallery from "@/components/Gallery";
 import { siteData } from "@/data/siteData";
+import { fetchWebsiteGalleryImages } from "@/services/galleryService";
 import { Camera } from "lucide-react";
 
 export const metadata = {
@@ -8,13 +9,23 @@ export const metadata = {
     "See our little heroes in action: arts & crafts, classroom STEM discoveries, outdoor playground moments, and festive events in Kazanchis, Addis Ababa.",
 };
 
-export default function GalleryPage() {
+export default async function GalleryPage() {
   const { brand } = siteData;
+
+  const galleryRes = await fetchWebsiteGalleryImages({ category: "All" }).catch(() => ({
+    success: false,
+    items: [],
+  }));
+
+  const initialGalleryItems =
+    galleryRes.success && galleryRes.items?.length > 0
+      ? galleryRes.items
+      : siteData.gallery.items;
 
   return (
     <div className="bg-white dark:bg-[#0B1120] transition-colors duration-300">
       {/* Interactive Gallery */}
-      <Gallery />
+      <Gallery initialItems={initialGalleryItems} />
 
       {/* Social Live Feeds Callout */}
       <section className="py-16 bg-sky-50 dark:bg-slate-900/40 text-center transition-colors">

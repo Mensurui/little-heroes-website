@@ -10,13 +10,14 @@ import BlogDetailModal from "@/components/BlogDetailModal";
 import { fetchPublishedNewsletters } from "@/services/blogService";
 import { Sparkles, ArrowRight } from "lucide-react";
 
-export default function BlogSection() {
+export default function BlogSection({ initialArticles = [] }) {
   const { blog, brand } = siteData;
 
-  const [articles, setArticles] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const hasInitial = Array.isArray(initialArticles) && initialArticles.length > 0;
+  const [articles, setArticles] = useState(hasInitial ? initialArticles : []);
+  const [loading, setLoading] = useState(!hasInitial);
   const [selectedArticle, setSelectedArticle] = useState(null);
-  const [isLiveSource, setIsLiveSource] = useState(false);
+  const [isLiveSource, setIsLiveSource] = useState(hasInitial);
 
   useEffect(() => {
     let isMounted = true;
@@ -30,15 +31,17 @@ export default function BlogSection() {
         if (result.success && result.items && result.items.length > 0) {
           setArticles(result.items);
           setIsLiveSource(true);
-        } else {
+        } else if (!hasInitial) {
           // Fallback gracefully to default curated siteData articles
           setArticles(blog.articles || []);
           setIsLiveSource(false);
         }
       } catch (err) {
         if (!isMounted) return;
-        setArticles(blog.articles || []);
-        setIsLiveSource(false);
+        if (!hasInitial) {
+          setArticles(blog.articles || []);
+          setIsLiveSource(false);
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -49,7 +52,7 @@ export default function BlogSection() {
     return () => {
       isMounted = false;
     };
-  }, [blog.articles]);
+  }, [blog.articles, hasInitial]);
 
   return (
     <section

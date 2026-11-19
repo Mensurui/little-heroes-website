@@ -76,6 +76,23 @@ export function formatPublicationDate(dateStr) {
 }
 
 export async function fetchPublishedNewsletters(timeoutMs = 8000) {
+  const isClient = typeof window !== "undefined";
+
+  if (isClient) {
+    try {
+      const res = await fetch("/api/newsletters", {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err) {
+      return { success: false, items: [], error: err.message, isFallback: true };
+    }
+    return { success: false, items: [], isFallback: true };
+  }
+
   const endpoint = `${FRAPPE_BASE_URL}/api/method/little_heroes.api.v1.newsletters.list_public_newsletters`;
 
   const controller = new AbortController();

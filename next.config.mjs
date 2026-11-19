@@ -35,6 +35,10 @@ const nextConfig = {
         destination: "https://api.assetflow.et/files/:path*",
       },
       {
+        source: "/file/:path*",
+        destination: "https://api.assetflow.et/file/:path*",
+      },
+      {
         source: "/private/files/:path*",
         destination: "https://api.assetflow.et/private/files/:path*",
       },
