@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { fetchNewsletterByName, fetchPublishedNewsletters } from "@/services/blogService";
 import { siteData } from "@/data/siteData";
 import ExpandableArticleContent from "@/components/ExpandableArticleContent";
+import ArticlePhotoGallery from "@/components/ArticlePhotoGallery";
+import ParentInteractions from "@/components/ParentInteractions";
 import WavyCard from "@/components/ui/WavyCard";
 import { ArrowLeft, Clock, Calendar, Sparkles, ArrowRight } from "lucide-react";
 
@@ -154,6 +156,14 @@ export default async function BlogPostPage({ params }) {
           expandableSections={article.expandableSections || []}
         />
 
+        {/* Classroom Photo Album (Multi-Photo Lightbox Gallery) */}
+        {article.galleryImages && article.galleryImages.length > 0 && (
+          <ArticlePhotoGallery
+            images={article.galleryImages}
+            title={article.title}
+          />
+        )}
+
         {/* Educator / Author Spotlight */}
         <div className="mt-16 pt-8 border-t border-slate-100 dark:border-slate-800">
           <WavyCard className="!p-6 sm:!p-8">
@@ -168,18 +178,24 @@ export default async function BlogPostPage({ params }) {
               </div>
               <div className="space-y-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-sky-500">
-                  Written by
+                  Classroom Educator
                 </span>
                 <h4 className="text-lg font-bold text-slate-900 dark:text-white">
                   {article.author}
                 </h4>
                 <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Dedicated to sharing modern pedagogy, respectful childcare frameworks, and milestone guidance with families in Addis Ababa.
+                  Dedicated to sharing modern pedagogy, respectful childcare frameworks, and classroom highlights with families in Addis Ababa.
                 </p>
               </div>
             </div>
           </WavyCard>
         </div>
+
+        {/* Parent Reactions, Addis Social Share & Comments */}
+        <ParentInteractions
+          articleId={article.id}
+          articleTitle={article.title}
+        />
 
         {/* Related Articles Section */}
         {relatedArticles.length > 0 && (
