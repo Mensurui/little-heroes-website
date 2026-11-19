@@ -56,8 +56,75 @@ export function normalizeBodyHtml(html) {
   if (!html || typeof html !== "string") return "<p>No content provided.</p>";
   let normalized = html;
   normalized = normalized.replace(/src=["']\/files\//gi, `src="${FRAPPE_BASE_URL}/files/`);
+  normalized = normalized.replace(/src=["']\/file\//gi, `src="${FRAPPE_BASE_URL}/file/`);
   normalized = normalized.replace(/src=["']\/private\/files\//gi, `src="${FRAPPE_BASE_URL}/private/files/`);
   return normalized;
+}
+
+export function extractAllImages(htmlContent) {
+  if (!htmlContent || typeof htmlContent !== "string") return [];
+  const images = [];
+  const regex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
+  let match;
+  while ((match = regex.exec(htmlContent)) !== null) {
+    const src = match[1];
+    if (src && !images.some((img) => img.src.includes(src))) {
+      images.push({
+        src: resolveImageUrl(src, images.length),
+        alt: "Classroom Activity Moment",
+      });
+    }
+  }
+  return images;
+}
+
+export function calculateReadTime(content) {
+  if (!content) return "2 min read";
+  const clean = content.replace(/<[^>]*>/g, " ").trim();
+  const words = clean.split(/\s+/).filter(Boolean).length;
+  const minutes = Math.max(1, Math.ceil(words / 160));
+  return `${minutes} min read`;
+}
+
+export function inferClassroomCategory(title = "", body = "") {
+  const combined = `${title} ${body}`.toLowerCase();
+  if (
+    combined.includes("infant") ||
+    combined.includes("toddler") ||
+    combined.includes("explorer") ||
+    combined.includes("sensory")
+  ) {
+    return "Little Explorers (1-2 yrs)";
+  }
+  if (
+    combined.includes("curious") ||
+    combined.includes("2-3") ||
+    combined.includes("pre-k") ||
+    combined.includes("preschool")
+  ) {
+    return "Curious Learners (2-3 yrs)";
+  }
+  if (
+    combined.includes("confident") ||
+    combined.includes("creator") ||
+    combined.includes("3-4") ||
+    combined.includes("kindergarten") ||
+    combined.includes("stem")
+  ) {
+    return "Confident Creators (3-4 yrs)";
+  }
+  return "Weekly Updates";
+}
+
+export function formatAuthorName(rawAuthor) {
+  if (!rawAuthor) return "Lead Educators";
+  if (rawAuthor.includes("amiribnumo")) return "Teacher Amir & Early Learning Team";
+  if (rawAuthor.includes("samuelwebalem")) return "Teacher Samuel & Lead Mentors";
+  if (rawAuthor.includes("@")) {
+    const user = rawAuthor.split("@")[0].replace(/[._]/g, " ");
+    return `Teacher ${user.charAt(0).toUpperCase() + user.slice(1)}`;
+  }
+  return rawAuthor;
 }
 
 export function formatPublicationDate(dateStr) {
@@ -152,19 +219,30 @@ export async function fetchPublishedNewsletters(timeoutMs = 8000) {
       })
     );
 
-    const items = enrichedItems.map((item, idx) => ({
-      id: item.name || `post-${idx}`,
-      name: item.name,
-      title: item.newsletter_title || "Daycare Announcement",
-      date: formatPublicationDate(item.newsletter_published_at || item.creation),
-      rawDate: item.newsletter_published_at || item.creation,
-      author: item.newsletter_published_by || "Little Heroes Team",
-      image: extractCoverImage(item, idx),
-      excerpt: extractExcerpt(item.newsletter_body),
-      body: normalizeBodyHtml(item.newsletter_body),
-      status: item.newsletter_status || "Published",
-      isLive: true,
-    }));
+    const items = enrichedItems.map((item, idx) => {
+      const category = inferClassroomCategory(item.newsletter_title, item.newsletter_body);
+      const readTime = calculateReadTime(item.newsletter_body);
+      const author = formatAuthorName(item.newsletter_published_by);
+      const galleryImages = extractAllImages(item.newsletter_body);
+
+      return {
+        id: item.name || `post-${idx}`,
+        name: item.name,
+        title: item.newsletter_title || "Daycare Announcement",
+        date: formatPublicationDate(item.newsletter_published_at || item.creation),
+        rawDate: item.newsletter_published_at || item.creation,
+        author: author,
+        authorRole: "Lead Educators",
+        category: category,
+        readTime: readTime,
+        image: extractCoverImage(item, idx),
+        galleryImages: galleryImages,
+        excerpt: extractExcerpt(item.newsletter_body),
+        body: normalizeBodyHtml(item.newsletter_body),
+        status: item.newsletter_status || "Published",
+        isLive: true,
+      };
+    });
 
     return { success: true, items, isFallback: false };
   } catch (err) {
@@ -208,6 +286,11 @@ export async function fetchNewsletterByName(nameOrId) {
           );
         }
 
+        const galleryImages = extractAllImages(raw.newsletter_body);
+        const category = inferClassroomCategory(raw.newsletter_title, raw.newsletter_body);
+        const readTime = calculateReadTime(raw.newsletter_body);
+        const author = formatAuthorName(raw.newsletter_published_by);
+
         return {
           success: true,
           article: {
@@ -216,14 +299,15 @@ export async function fetchNewsletterByName(nameOrId) {
             title: raw.newsletter_title,
             date: formatPublicationDate(raw.newsletter_published_at || raw.creation),
             rawDate: raw.newsletter_published_at || raw.creation,
-            author: raw.newsletter_published_by || "Little Heroes Admissions",
-            authorRole: "Care & Education Team",
+            author: author,
+            authorRole: "Lead Educators",
             image: coverImage,
+            galleryImages: galleryImages,
             excerpt: extractExcerpt(raw.newsletter_body),
             body: cleanedBody,
             status: raw.newsletter_status || "Published",
-            category: "Daycare Bulletin",
-            readTime: "4 min read",
+            category: category,
+            readTime: readTime,
             keyTakeaways: [
               "Official announcement directly from the Little Heroes administration.",
               "Applicable to enrolled families and registered visit requests.",
