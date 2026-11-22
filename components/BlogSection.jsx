@@ -1,14 +1,51 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { siteData } from "@/data/siteData";
 import WavyCard from "@/components/ui/WavyCard";
 import BlogDetailModal from "@/components/BlogDetailModal";
 import { fetchPublishedNewsletters } from "@/services/blogService";
-import { Sparkles, ArrowRight, Search, X, Clock, User } from "lucide-react";
+import {
+  Sparkles,
+  ArrowRight,
+  Search,
+  X,
+  Clock,
+  User,
+  Calendar,
+  ChevronDown,
+  Check,
+} from "lucide-react";
+
+function getArticleDateInfo(article) {
+  if (!article) return null;
+  const raw = article.rawDate || article.date;
+  if (!raw) return null;
+
+  let d;
+  if (typeof raw === "string") {
+    d = new Date(raw.replace(" ", "T"));
+    if (isNaN(d.getTime())) {
+      d = new Date(raw);
+    }
+  } else {
+    d = new Date(raw);
+  }
+
+  if (isNaN(d.getTime())) return null;
+
+  const year = d.getFullYear();
+  const monthIndex = d.getMonth();
+  const monthName = d.toLocaleString("en-US", { month: "long" });
+  const shortMonth = d.toLocaleString("en-US", { month: "short" });
+  const key = `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
+  const label = `${monthName} ${year}`;
+
+  return { year, monthIndex, monthName, shortMonth, key, label };
+}
 
 export default function BlogSection({ initialArticles = [] }) {
   const { blog, brand } = siteData;
@@ -20,6 +57,9 @@ export default function BlogSection({ initialArticles = [] }) {
   const [isLiveSource, setIsLiveSource] = useState(hasInitial);
   const [selectedCategory, setSelectedCategory] = useState("All Updates");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedArchive, setSelectedArchive] = useState(null);
+  const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+  const archiveDropdownRef = useRef(null);
 
   const categories = [
     "All Updates",
@@ -29,16 +69,82 @@ export default function BlogSection({ initialArticles = [] }) {
     "Weekly Updates",
   ];
 
+  // Dynamic Archive Timeline calculation (grouped by year & month)
+  const archiveTimeline = useMemo(() => {
+    const monthMap = new Map();
+
+    articles.forEach((art) => {
+      const info = getArticleDateInfo(art);
+      if (!info) return;
+
+      if (!monthMap.has(info.key)) {
+        monthMap.set(info.key, {
+          ...info,
+          count: 0,
+        });
+      }
+      monthMap.get(info.key).count += 1;
+    });
+
+    const sortedMonths = Array.from(monthMap.values()).sort((a, b) =>
+      b.key.localeCompare(a.key)
+    );
+
+    const yearGroups = {};
+    sortedMonths.forEach((item) => {
+      if (!yearGroups[item.year]) {
+        yearGroups[item.year] = [];
+      }
+      yearGroups[item.year].push(item);
+    });
+
+    return {
+      months: sortedMonths,
+      yearGroups: Object.entries(yearGroups).sort(([yA], [yB]) => Number(yB) - Number(yA)),
+      total: articles.length,
+    };
+  }, [articles]);
+
+  // Handle click outside to close the archive popover
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        archiveDropdownRef.current &&
+        !archiveDropdownRef.current.contains(event.target)
+      ) {
+        setIsArchiveOpen(false);
+      }
+    }
+    if (isArchiveOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isArchiveOpen]);
+
   const filteredArticles = articles.filter((a) => {
+    // 1. Category Filter
     const matchesCategory =
       selectedCategory === "All Updates" || a.category === selectedCategory;
+
+    // 2. Search Query Filter
     const q = searchQuery.trim().toLowerCase();
     const matchesQuery =
       !q ||
       (a.title && a.title.toLowerCase().includes(q)) ||
       (a.excerpt && a.excerpt.toLowerCase().includes(q)) ||
       (a.author && a.author.toLowerCase().includes(q));
-    return matchesCategory && matchesQuery;
+
+    // 3. Month & Year Archive Filter
+    const matchesArchive =
+      !selectedArchive ||
+      (() => {
+        const info = getArticleDateInfo(a);
+        return info && info.key === selectedArchive.key;
+      })();
+
+    return matchesCategory && matchesQuery && matchesArchive;
   });
 
   const getCategoryBadgeStyle = (cat) => {
@@ -67,7 +173,6 @@ export default function BlogSection({ initialArticles = [] }) {
           setArticles(result.items);
           setIsLiveSource(true);
         } else if (!hasInitial) {
-          // Fallback gracefully to default curated siteData articles
           setArticles(blog.articles || []);
           setIsLiveSource(false);
         }
@@ -154,30 +259,157 @@ export default function BlogSection({ initialArticles = [] }) {
           </p>
         </div>
 
-        {/* Search Bar & Classroom Category Filter Tabs */}
+        {/* Search Bar, Monthly Archive Pill & Classroom Category Filter Tabs */}
         <div className="max-w-4xl mx-auto mb-10 space-y-5">
-          {/* Real-time Search Input */}
-          <div className="relative max-w-md mx-auto">
-            <Search
-              size={17}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search weekly updates, crafts, activities..."
-              className="w-full pl-11 pr-10 py-3 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/80 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:focus:ring-sky-950 transition-all shadow-sm"
-            />
-            {searchQuery && (
+          {/* Control Bar: Search Input & Timeline Archive Dropdown Pill */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            {/* Real-time Search Input */}
+            <div className="relative w-full sm:w-80">
+              <Search
+                size={16}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search updates, crafts, activities..."
+                className="w-full pl-11 pr-10 py-2.5 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/80 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:focus:ring-sky-950 transition-all shadow-sm"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  aria-label="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Timeline Archive Dropdown Pill (Option 1) */}
+            <div className="relative w-full sm:w-auto" ref={archiveDropdownRef}>
               <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                aria-label="Clear search"
+                type="button"
+                onClick={() => setIsArchiveOpen((prev) => !prev)}
+                className={`w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2.5 px-4 py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-all border shadow-sm ${
+                  selectedArchive
+                    ? "bg-sky-50 dark:bg-sky-950/70 border-sky-400 text-sky-700 dark:text-sky-300 ring-2 ring-sky-200/60 dark:ring-sky-900/60"
+                    : "bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-sky-300"
+                }`}
               >
-                <X size={15} />
+                <div className="flex items-center gap-2">
+                  <Calendar
+                    size={15}
+                    className={selectedArchive ? "text-sky-500" : "text-slate-400"}
+                  />
+                  <span>
+                    {selectedArchive ? selectedArchive.label : "Archive Timeline"}
+                  </span>
+                </div>
+
+                {selectedArchive ? (
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedArchive(null);
+                    }}
+                    className="p-0.5 rounded-full hover:bg-sky-200 dark:hover:bg-sky-800 text-sky-600 dark:text-sky-300 transition-colors"
+                    title="Clear archive filter"
+                  >
+                    <X size={13} />
+                  </span>
+                ) : (
+                  <ChevronDown
+                    size={14}
+                    className={`text-slate-400 transition-transform duration-200 ${
+                      isArchiveOpen ? "rotate-180 text-sky-500" : ""
+                    }`}
+                  />
+                )}
               </button>
-            )}
+
+              {/* Floating Archive Popover */}
+              <AnimatePresence>
+                {isArchiveOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 sm:right-auto sm:left-0 mt-2 w-72 max-h-80 overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-2 z-40 space-y-1.5"
+                  >
+                    <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                        Past Classroom Stories
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        {archiveTimeline.total} Total
+                      </span>
+                    </div>
+
+                    {/* Reset to All Dates */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedArchive(null);
+                        setIsArchiveOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
+                        !selectedArchive
+                          ? "bg-sky-50 dark:bg-sky-950/80 text-sky-600 dark:text-sky-300 font-bold"
+                          : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Calendar size={13} className="text-slate-400" />
+                        <span>All Dates</span>
+                      </div>
+                      {!selectedArchive && <Check size={14} className="text-sky-500" />}
+                    </button>
+
+                    {/* Year Groups */}
+                    {archiveTimeline.yearGroups.map(([year, months]) => (
+                      <div key={year} className="pt-2">
+                        <div className="px-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          {year}
+                        </div>
+                        <div className="space-y-0.5">
+                          {months.map((m) => {
+                            const isSelected = selectedArchive?.key === m.key;
+                            return (
+                              <button
+                                key={m.key}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedArchive(m);
+                                  setIsArchiveOpen(false);
+                                }}
+                                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors ${
+                                  isSelected
+                                    ? "bg-sky-50 dark:bg-sky-950/80 text-sky-600 dark:text-sky-300 font-bold"
+                                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                }`}
+                              >
+                                <span className="font-medium">{m.monthName}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-medium">
+                                    {m.count} {m.count === 1 ? "story" : "stories"}
+                                  </span>
+                                  {isSelected && (
+                                    <Check size={14} className="text-sky-500" />
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
           {/* Classroom Category Pills */}
@@ -200,10 +432,45 @@ export default function BlogSection({ initialArticles = [] }) {
             })}
           </div>
 
-          {/* Active Filter Count Indicator */}
-          <div className="text-center text-xs text-slate-400">
-            Showing <span className="font-bold text-slate-700 dark:text-slate-200">{filteredArticles.length}</span> updates
-            {selectedCategory !== "All Updates" && ` in ${selectedCategory}`}
+          {/* Active Filter Indicators & Reset Action */}
+          <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-slate-400">
+            <span>
+              Showing <strong className="text-slate-700 dark:text-slate-200">{filteredArticles.length}</strong> updates
+            </span>
+            {selectedCategory !== "All Updates" && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                {selectedCategory}
+                <button
+                  onClick={() => setSelectedCategory("All Updates")}
+                  className="hover:text-rose-500"
+                >
+                  <X size={11} />
+                </button>
+              </span>
+            )}
+            {selectedArchive && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950/80 text-sky-700 dark:text-sky-300 font-semibold border border-sky-200/50 dark:border-sky-800/50">
+                🗓️ {selectedArchive.label}
+                <button
+                  onClick={() => setSelectedArchive(null)}
+                  className="hover:text-rose-500"
+                >
+                  <X size={11} />
+                </button>
+              </span>
+            )}
+            {(selectedCategory !== "All Updates" || selectedArchive || searchQuery) && (
+              <button
+                onClick={() => {
+                  setSelectedCategory("All Updates");
+                  setSelectedArchive(null);
+                  setSearchQuery("");
+                }}
+                className="text-sky-500 hover:underline font-semibold ml-1"
+              >
+                Clear all
+              </button>
+            )}
           </div>
         </div>
 
@@ -229,7 +496,7 @@ export default function BlogSection({ initialArticles = [] }) {
             ))}
           </div>
         ) : filteredArticles.length === 0 ? (
-          /* Empty Search State */
+          /* Empty Filter State */
           <div className="text-center py-16 px-6 max-w-md mx-auto space-y-4">
             <div className="w-14 h-14 rounded-2xl bg-sky-50 dark:bg-slate-800 text-sky-400 flex items-center justify-center mx-auto">
               <Search size={24} />
@@ -238,12 +505,13 @@ export default function BlogSection({ initialArticles = [] }) {
               No matching updates found
             </h4>
             <p className="text-xs sm:text-sm text-slate-500">
-              Try adjusting your search terms or select "All Updates" to view all classroom posts.
+              Try adjusting your search terms, clearing the date filter, or select "All Updates" to view all classroom posts.
             </p>
             <button
               onClick={() => {
                 setSearchQuery("");
                 setSelectedCategory("All Updates");
+                setSelectedArchive(null);
               }}
               className="px-5 py-2 rounded-full bg-sky-400 text-white text-xs font-bold hover:bg-sky-500 transition-colors"
             >
