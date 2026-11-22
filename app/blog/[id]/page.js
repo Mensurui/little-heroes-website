@@ -77,17 +77,11 @@ export default async function BlogPostPage({ params }) {
 
         {/* Article Header */}
         <header className="space-y-6 mb-10">
-          {/* Category & Status Pill */}
+          {/* Category Pill */}
           <div className="flex items-center gap-2.5">
             <span className="px-4 py-1.5 rounded-full text-xs font-bold tracking-wide uppercase bg-sky-100 text-sky-700 dark:bg-sky-950/80 dark:text-sky-300 border border-sky-200/60 dark:border-sky-800">
               {article.category || "Daycare Guide"}
             </span>
-            {article.isLive && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                <Sparkles size={12} />
-                Official Bulletin
-              </span>
-            )}
           </div>
 
           {/* Main Title */}

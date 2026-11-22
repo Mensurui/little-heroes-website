@@ -200,56 +200,12 @@ export default function BlogSection({ initialArticles = [] }) {
       className="pt-6 pb-16 lg:pt-8 lg:pb-24 bg-white dark:bg-[#0B1120] transition-colors duration-300 overflow-hidden"
     >
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
-        {/* Top Sky-Blue Social Banner (Figma Exact) */}
-        <div className="relative mb-12 sm:mb-14 rounded-3xl bg-sky-400 p-8 sm:p-10 lg:p-12 text-white shadow-xl shadow-sky-200/50 dark:shadow-none overflow-hidden">
-          {/* Subtle Organic Background Patterns */}
-          <div className="absolute -top-12 -right-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-sky-300/30 rounded-full blur-2xl pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
-            <div className="space-y-3 text-center lg:text-left max-w-2xl">
-              <h3 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight">
-                {blog.bannerTitle}
-              </h3>
-              <p className="text-sky-100 text-sm sm:text-base leading-relaxed">
-                {blog.bannerSubtitle}
-              </p>
-            </div>
-
-            {/* Social Action Buttons */}
-            <div className="flex flex-wrap items-center gap-4 flex-shrink-0">
-              <a
-                href={brand.socials.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-8 py-3.5 rounded-full bg-white hover:bg-slate-50 text-rose-500 font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95"
-              >
-                Instagram
-              </a>
-              <a
-                href={brand.socials.tiktok}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-8 py-3.5 rounded-full bg-slate-900 hover:bg-black text-white font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95"
-              >
-                TikTok
-              </a>
-            </div>
-          </div>
-        </div>
-
         {/* Section Header: Our Latest Media / Bulletins */}
         <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10 space-y-2 sm:space-y-3">
           <div className="inline-flex items-center justify-center gap-2">
             <span className="text-xs sm:text-sm font-bold tracking-widest text-sky-400 uppercase">
               {blog.subtitle}
             </span>
-            {isLiveSource && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold tracking-normal uppercase border border-emerald-500/20">
-                <Sparkles size={11} />
-                Live Bulletins
-              </span>
-            )}
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             {blog.title}
@@ -597,6 +553,44 @@ export default function BlogSection({ initialArticles = [] }) {
           </div>
         )}
       
+        {/* Bottom Sky-Blue Social Banner */}
+        <div className="relative mt-16 sm:mt-20 rounded-3xl bg-sky-400 p-8 sm:p-10 lg:p-12 text-white shadow-xl shadow-sky-200/50 dark:shadow-none overflow-hidden">
+          {/* Subtle Organic Background Patterns */}
+          <div className="absolute -top-12 -right-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-sky-300/30 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
+            <div className="space-y-3 text-center lg:text-left max-w-2xl">
+              <h3 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight">
+                {blog.bannerTitle}
+              </h3>
+              <p className="text-sky-100 text-sm sm:text-base leading-relaxed">
+                {blog.bannerSubtitle}
+              </p>
+            </div>
+
+            {/* Social Action Buttons */}
+            <div className="flex flex-wrap items-center gap-4 flex-shrink-0">
+              <a
+                href={brand.socials.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-8 py-3.5 rounded-full bg-white hover:bg-slate-50 text-rose-500 font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95"
+              >
+                Instagram
+              </a>
+              <a
+                href={brand.socials.tiktok}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-8 py-3.5 rounded-full bg-slate-900 hover:bg-black text-white font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95"
+              >
+                TikTok
+              </a>
+            </div>
+          </div>
+        </div>
+
         {/* Full Article Reader Modal */}
         <BlogDetailModal
           article={selectedArticle}
