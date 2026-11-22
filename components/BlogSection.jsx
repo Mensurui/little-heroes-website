@@ -20,24 +20,6 @@ import {
   Check,
 } from "lucide-react";
 
-function getSeasonalIcon(monthIndex) {
-  const icons = [
-    "❄️", // Jan
-    "🧸", // Feb
-    "🌱", // Mar
-    "🌸", // Apr
-    "☀️", // May
-    "🎨", // Jun
-    "🌿", // Jul
-    "🌻", // Aug
-    "🎒", // Sep
-    "🍁", // Oct
-    "🍂", // Nov
-    "✨", // Dec
-  ];
-  return icons[monthIndex] || "🗓️";
-}
-
 function getArticleDateInfo(article) {
   if (!article) return null;
   const raw = article.rawDate || article.date;
@@ -277,7 +259,7 @@ export default function BlogSection({ initialArticles = [] }) {
                       : "bg-slate-50 dark:bg-slate-900/60 text-slate-600 dark:text-slate-300 border-slate-200/70 dark:border-slate-800 hover:border-sky-300"
                   }`}
                 >
-                  <span>✨ All Dates</span>
+                  <span>All Dates</span>
                   <span
                     className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
                       !selectedArchive
@@ -295,7 +277,6 @@ export default function BlogSection({ initialArticles = [] }) {
                 {/* Individual Month Timeline Pills */}
                 {archiveTimeline.months.map((m) => {
                   const isSelected = selectedArchive?.key === m.key;
-                  const icon = getSeasonalIcon(m.monthIndex);
                   return (
                     <button
                       key={m.key}
@@ -307,7 +288,6 @@ export default function BlogSection({ initialArticles = [] }) {
                           : "bg-white dark:bg-slate-900/80 text-slate-600 dark:text-slate-300 border-slate-200/70 dark:border-slate-800 hover:border-sky-300 hover:text-sky-500"
                       }`}
                     >
-                      <span>{icon}</span>
                       <span>
                         {m.shortMonth} {m.year}
                       </span>
@@ -345,7 +325,7 @@ export default function BlogSection({ initialArticles = [] }) {
             )}
             {selectedArchive && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950/80 text-sky-700 dark:text-sky-300 font-semibold border border-sky-200/50 dark:border-sky-800/50">
-                🗓️ {selectedArchive.label}
+                {selectedArchive.label}
                 <button
                   onClick={() => setSelectedArchive(null)}
                   className="hover:text-rose-500"
