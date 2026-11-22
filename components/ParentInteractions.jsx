@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Heart,
   MessageCircle,
   Share2,
   Check,
@@ -12,18 +11,13 @@ import {
   User,
   Clock,
 } from "lucide-react";
-import confetti from "canvas-confetti";
 
 export default function ParentInteractions({ articleId, articleTitle }) {
-  // 1. Likes State
-  const [likes, setLikes] = useState(14);
-  const [hasLiked, setHasLiked] = useState(false);
-
-  // 2. Share State
+  // 1. Share State
   const [copied, setCopied] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
 
-  // 3. Comments State
+  // 2. Comments State
   const [comments, setComments] = useState([
     {
       id: "c-1",
@@ -53,13 +47,6 @@ export default function ParentInteractions({ articleId, articleTitle }) {
     if (typeof window !== "undefined") {
       setShareUrl(window.location.href);
 
-      // Restore like state
-      const savedLike = localStorage.getItem(`lh_like_${articleId}`);
-      if (savedLike) {
-        setHasLiked(true);
-        setLikes((prev) => prev + 1);
-      }
-
       // Restore stored comments
       const storedComments = localStorage.getItem(`lh_comments_${articleId}`);
       if (storedComments) {
@@ -72,22 +59,6 @@ export default function ParentInteractions({ articleId, articleTitle }) {
       }
     }
   }, [articleId]);
-
-  const handleLike = () => {
-    if (hasLiked) return;
-    setHasLiked(true);
-    setLikes((prev) => prev + 1);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(`lh_like_${articleId}`, "true");
-    }
-    try {
-      confetti({
-        particleCount: 35,
-        spread: 60,
-        origin: { y: 0.8 },
-      });
-    } catch {}
-  };
 
   const handleCopyLink = () => {
     if (typeof window !== "undefined") {
@@ -145,44 +116,28 @@ export default function ParentInteractions({ articleId, articleTitle }) {
 
   return (
     <div className="mt-14 pt-10 border-t border-slate-100 dark:border-slate-800 space-y-12">
-      {/* 1. Action Bar: Like Button & Addis Social Sharing */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-6 p-6 rounded-3xl bg-sky-50/50 dark:bg-slate-900/40 border border-sky-100 dark:border-slate-800">
-        {/* Heart / Like Counter */}
+      {/* 1. Action Bar: Share Classroom Journal to Family */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 sm:p-6 rounded-3xl bg-sky-50/50 dark:bg-slate-900/40 border border-sky-100 dark:border-slate-800">
         <div className="flex items-center gap-3">
-          <motion.button
-            whileTap={{ scale: 0.85 }}
-            onClick={handleLike}
-            disabled={hasLiked}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm ${
-              hasLiked
-                ? "bg-rose-500 text-white shadow-rose-200 dark:shadow-none"
-                : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-rose-400 hover:text-rose-500"
-            }`}
-          >
-            <Heart
-              size={18}
-              className={`${hasLiked ? "fill-white" : "text-rose-500"}`}
-            />
-            <span>{likes}</span>
-            <span className="text-xs font-normal opacity-90">
-              {hasLiked ? "Loved!" : "Love this"}
-            </span>
-          </motion.button>
-          <span className="text-xs text-slate-400">
-            {likes} families reacted
-          </span>
+          <div className="w-10 h-10 rounded-2xl bg-sky-100 dark:bg-sky-900/50 flex items-center justify-center text-sky-600 dark:text-sky-300 flex-shrink-0">
+            <Share2 size={18} />
+          </div>
+          <div>
+            <h5 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+              Share With Family
+            </h5>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Share this week's learning moments with grandparents & family
+            </p>
+          </div>
         </div>
 
         {/* Share to WhatsApp & Telegram Buttons */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-            Share update:
-          </span>
-
           {/* Telegram */}
           <button
             onClick={shareToTelegram}
-            className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#229ED9]/10 text-[#229ED9] hover:bg-[#229ED9] hover:text-white transition-colors border border-[#229ED9]/20"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold bg-[#229ED9]/10 text-[#229ED9] hover:bg-[#229ED9] hover:text-white transition-colors border border-[#229ED9]/20"
             title="Share with family on Telegram"
           >
             Telegram
@@ -191,7 +146,7 @@ export default function ParentInteractions({ articleId, articleTitle }) {
           {/* WhatsApp */}
           <button
             onClick={shareToWhatsApp}
-            className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white transition-colors border border-[#25D366]/20"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white transition-colors border border-[#25D366]/20"
             title="Share with family on WhatsApp"
           >
             WhatsApp
@@ -200,18 +155,15 @@ export default function ParentInteractions({ articleId, articleTitle }) {
           {/* Copy Link */}
           <button
             onClick={handleCopyLink}
-            className="px-3.5 py-1.5 rounded-full text-xs font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-sky-500 border border-slate-200 dark:border-slate-700 transition-colors inline-flex items-center gap-1.5"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-700 transition-colors shadow-sm"
           >
             {copied ? (
               <>
-                <Check size={13} className="text-emerald-500" />
-                <span className="text-emerald-600 text-xs">Copied</span>
+                <Check size={14} className="text-emerald-500" />
+                <span className="text-emerald-600 font-bold">Link Copied!</span>
               </>
             ) : (
-              <>
-                <Share2 size={13} />
-                <span>Copy</span>
-              </>
+              <span>Copy Link</span>
             )}
           </button>
         </div>

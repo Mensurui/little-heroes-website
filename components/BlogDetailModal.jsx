@@ -62,7 +62,7 @@ export default function BlogDetailModal({ article, isOpen, onClose }) {
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur z-20">
               <div className="flex items-center gap-2 text-sky-500 font-bold text-xs uppercase tracking-wider">
                 <BookOpen size={16} />
-                <span>Little Heroes Bulletin</span>
+                <span>Classroom Story</span>
               </div>
               <button
                 type="button"

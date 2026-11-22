@@ -1,14 +1,51 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { siteData } from "@/data/siteData";
 import WavyCard from "@/components/ui/WavyCard";
 import BlogDetailModal from "@/components/BlogDetailModal";
 import { fetchPublishedNewsletters } from "@/services/blogService";
-import { Sparkles, ArrowRight, Search, X, Clock, User } from "lucide-react";
+import {
+  Sparkles,
+  ArrowRight,
+  Search,
+  X,
+  Clock,
+  User,
+  Calendar,
+  ChevronDown,
+  Check,
+} from "lucide-react";
+
+function getArticleDateInfo(article) {
+  if (!article) return null;
+  const raw = article.rawDate || article.date;
+  if (!raw) return null;
+
+  let d;
+  if (typeof raw === "string") {
+    d = new Date(raw.replace(" ", "T"));
+    if (isNaN(d.getTime())) {
+      d = new Date(raw);
+    }
+  } else {
+    d = new Date(raw);
+  }
+
+  if (isNaN(d.getTime())) return null;
+
+  const year = d.getFullYear();
+  const monthIndex = d.getMonth();
+  const monthName = d.toLocaleString("en-US", { month: "long" });
+  const shortMonth = d.toLocaleString("en-US", { month: "short" });
+  const key = `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
+  const label = `${monthName} ${year}`;
+
+  return { year, monthIndex, monthName, shortMonth, key, label };
+}
 
 export default function BlogSection({ initialArticles = [] }) {
   const { blog, brand } = siteData;
@@ -20,6 +57,7 @@ export default function BlogSection({ initialArticles = [] }) {
   const [isLiveSource, setIsLiveSource] = useState(hasInitial);
   const [selectedCategory, setSelectedCategory] = useState("All Updates");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedArchive, setSelectedArchive] = useState(null);
 
   const categories = [
     "All Updates",
@@ -29,16 +67,64 @@ export default function BlogSection({ initialArticles = [] }) {
     "Weekly Updates",
   ];
 
+  // Dynamic Archive Timeline calculation (grouped by year & month)
+  const archiveTimeline = useMemo(() => {
+    const monthMap = new Map();
+
+    articles.forEach((art) => {
+      const info = getArticleDateInfo(art);
+      if (!info) return;
+
+      if (!monthMap.has(info.key)) {
+        monthMap.set(info.key, {
+          ...info,
+          count: 0,
+        });
+      }
+      monthMap.get(info.key).count += 1;
+    });
+
+    const sortedMonths = Array.from(monthMap.values()).sort((a, b) =>
+      b.key.localeCompare(a.key)
+    );
+
+    const yearGroups = {};
+    sortedMonths.forEach((item) => {
+      if (!yearGroups[item.year]) {
+        yearGroups[item.year] = [];
+      }
+      yearGroups[item.year].push(item);
+    });
+
+    return {
+      months: sortedMonths,
+      yearGroups: Object.entries(yearGroups).sort(([yA], [yB]) => Number(yB) - Number(yA)),
+      total: articles.length,
+    };
+  }, [articles]);
+
   const filteredArticles = articles.filter((a) => {
+    // 1. Category Filter
     const matchesCategory =
       selectedCategory === "All Updates" || a.category === selectedCategory;
+
+    // 2. Search Query Filter
     const q = searchQuery.trim().toLowerCase();
     const matchesQuery =
       !q ||
       (a.title && a.title.toLowerCase().includes(q)) ||
       (a.excerpt && a.excerpt.toLowerCase().includes(q)) ||
       (a.author && a.author.toLowerCase().includes(q));
-    return matchesCategory && matchesQuery;
+
+    // 3. Month & Year Archive Filter
+    const matchesArchive =
+      !selectedArchive ||
+      (() => {
+        const info = getArticleDateInfo(a);
+        return info && info.key === selectedArchive.key;
+      })();
+
+    return matchesCategory && matchesQuery && matchesArchive;
   });
 
   const getCategoryBadgeStyle = (cat) => {
@@ -67,7 +153,6 @@ export default function BlogSection({ initialArticles = [] }) {
           setArticles(result.items);
           setIsLiveSource(true);
         } else if (!hasInitial) {
-          // Fallback gracefully to default curated siteData articles
           setArticles(blog.articles || []);
           setIsLiveSource(false);
         }
@@ -95,56 +180,12 @@ export default function BlogSection({ initialArticles = [] }) {
       className="pt-6 pb-16 lg:pt-8 lg:pb-24 bg-white dark:bg-[#0B1120] transition-colors duration-300 overflow-hidden"
     >
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
-        {/* Top Sky-Blue Social Banner (Figma Exact) */}
-        <div className="relative mb-12 sm:mb-14 rounded-3xl bg-sky-400 p-8 sm:p-10 lg:p-12 text-white shadow-xl shadow-sky-200/50 dark:shadow-none overflow-hidden">
-          {/* Subtle Organic Background Patterns */}
-          <div className="absolute -top-12 -right-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-sky-300/30 rounded-full blur-2xl pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
-            <div className="space-y-3 text-center lg:text-left max-w-2xl">
-              <h3 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight">
-                {blog.bannerTitle}
-              </h3>
-              <p className="text-sky-100 text-sm sm:text-base leading-relaxed">
-                {blog.bannerSubtitle}
-              </p>
-            </div>
-
-            {/* Social Action Buttons */}
-            <div className="flex flex-wrap items-center gap-4 flex-shrink-0">
-              <a
-                href={brand.socials.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-8 py-3.5 rounded-full bg-white hover:bg-slate-50 text-rose-500 font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95"
-              >
-                Instagram
-              </a>
-              <a
-                href={brand.socials.tiktok}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-8 py-3.5 rounded-full bg-slate-900 hover:bg-black text-white font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95"
-              >
-                TikTok
-              </a>
-            </div>
-          </div>
-        </div>
-
         {/* Section Header: Our Latest Media / Bulletins */}
         <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10 space-y-2 sm:space-y-3">
           <div className="inline-flex items-center justify-center gap-2">
             <span className="text-xs sm:text-sm font-bold tracking-widest text-sky-400 uppercase">
               {blog.subtitle}
             </span>
-            {isLiveSource && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold tracking-normal uppercase border border-emerald-500/20">
-                <Sparkles size={11} />
-                Live Bulletins
-              </span>
-            )}
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             {blog.title}
@@ -154,20 +195,20 @@ export default function BlogSection({ initialArticles = [] }) {
           </p>
         </div>
 
-        {/* Search Bar & Classroom Category Filter Tabs */}
-        <div className="max-w-4xl mx-auto mb-10 space-y-5">
+        {/* Search Bar, Classroom Tabs & Horizon Timeline Ribbon */}
+        <div className="max-w-4xl mx-auto mb-10 space-y-4 sm:space-y-5">
           {/* Real-time Search Input */}
           <div className="relative max-w-md mx-auto">
             <Search
-              size={17}
+              size={16}
               className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
             />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search weekly updates, crafts, activities..."
-              className="w-full pl-11 pr-10 py-3 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/80 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:focus:ring-sky-950 transition-all shadow-sm"
+              placeholder="Search updates, crafts, activities..."
+              className="w-full pl-11 pr-10 py-2.5 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/80 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:focus:ring-sky-950 transition-all shadow-sm"
             />
             {searchQuery && (
               <button
@@ -175,12 +216,12 @@ export default function BlogSection({ initialArticles = [] }) {
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                 aria-label="Clear search"
               >
-                <X size={15} />
+                <X size={14} />
               </button>
             )}
           </div>
 
-          {/* Classroom Category Pills */}
+          {/* Classroom Category Filter Tabs */}
           <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5">
             {categories.map((cat) => {
               const isActive = selectedCategory === cat;
@@ -200,10 +241,111 @@ export default function BlogSection({ initialArticles = [] }) {
             })}
           </div>
 
-          {/* Active Filter Count Indicator */}
-          <div className="text-center text-xs text-slate-400">
-            Showing <span className="font-bold text-slate-700 dark:text-slate-200">{filteredArticles.length}</span> updates
-            {selectedCategory !== "All Updates" && ` in ${selectedCategory}`}
+          {/* Option 1: Interactive Horizon Memory Timeline Strip (Mobile-Optimized) */}
+          {archiveTimeline.months.length > 0 && (
+            <div className="relative pt-1 sm:pt-2">
+              {/* Left/Right Gradient fade masks for smooth touch scrolling on mobile */}
+              <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white dark:from-[#0B1120] to-transparent z-10 sm:hidden" />
+              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white dark:from-[#0B1120] to-transparent z-10 sm:hidden" />
+
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth px-3 sm:px-0 sm:justify-center py-1">
+                {/* All Dates Pill */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedArchive(null)}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all border ${
+                    !selectedArchive
+                      ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent shadow-sm"
+                      : "bg-slate-50 dark:bg-slate-900/60 text-slate-600 dark:text-slate-300 border-slate-200/70 dark:border-slate-800 hover:border-sky-300"
+                  }`}
+                >
+                  <span>All Dates</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                      !selectedArchive
+                        ? "bg-white/20 text-white dark:bg-slate-800 dark:text-slate-200"
+                        : "bg-slate-200/70 dark:bg-slate-800 text-slate-500"
+                    }`}
+                  >
+                    {archiveTimeline.total}
+                  </span>
+                </button>
+
+                {/* Subtle Divider */}
+                <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 flex-shrink-0 mx-0.5" />
+
+                {/* Individual Month Timeline Pills */}
+                {archiveTimeline.months.map((m) => {
+                  const isSelected = selectedArchive?.key === m.key;
+                  return (
+                    <button
+                      key={m.key}
+                      type="button"
+                      onClick={() => setSelectedArchive(isSelected ? null : m)}
+                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all border ${
+                        isSelected
+                          ? "bg-sky-400 text-white border-sky-400 shadow-md shadow-sky-200/50 dark:shadow-none scale-105"
+                          : "bg-white dark:bg-slate-900/80 text-slate-600 dark:text-slate-300 border-slate-200/70 dark:border-slate-800 hover:border-sky-300 hover:text-sky-500"
+                      }`}
+                    >
+                      <span>
+                        {m.shortMonth} {m.year}
+                      </span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                          isSelected
+                            ? "bg-white/30 text-white"
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                        }`}
+                      >
+                        {m.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Active Filter Indicators & Reset Action */}
+          <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-slate-400">
+            <span>
+              Showing <strong className="text-slate-700 dark:text-slate-200">{filteredArticles.length}</strong> updates
+            </span>
+            {selectedCategory !== "All Updates" && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                {selectedCategory}
+                <button
+                  onClick={() => setSelectedCategory("All Updates")}
+                  className="hover:text-rose-500"
+                >
+                  <X size={11} />
+                </button>
+              </span>
+            )}
+            {selectedArchive && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950/80 text-sky-700 dark:text-sky-300 font-semibold border border-sky-200/50 dark:border-sky-800/50">
+                {selectedArchive.label}
+                <button
+                  onClick={() => setSelectedArchive(null)}
+                  className="hover:text-rose-500"
+                >
+                  <X size={11} />
+                </button>
+              </span>
+            )}
+            {(selectedCategory !== "All Updates" || selectedArchive || searchQuery) && (
+              <button
+                onClick={() => {
+                  setSelectedCategory("All Updates");
+                  setSelectedArchive(null);
+                  setSearchQuery("");
+                }}
+                className="text-sky-500 hover:underline font-semibold ml-1"
+              >
+                Clear all
+              </button>
+            )}
           </div>
         </div>
 
@@ -229,7 +371,7 @@ export default function BlogSection({ initialArticles = [] }) {
             ))}
           </div>
         ) : filteredArticles.length === 0 ? (
-          /* Empty Search State */
+          /* Empty Filter State */
           <div className="text-center py-16 px-6 max-w-md mx-auto space-y-4">
             <div className="w-14 h-14 rounded-2xl bg-sky-50 dark:bg-slate-800 text-sky-400 flex items-center justify-center mx-auto">
               <Search size={24} />
@@ -238,12 +380,13 @@ export default function BlogSection({ initialArticles = [] }) {
               No matching updates found
             </h4>
             <p className="text-xs sm:text-sm text-slate-500">
-              Try adjusting your search terms or select "All Updates" to view all classroom posts.
+              Try adjusting your search terms, clearing the date filter, or select "All Updates" to view all classroom posts.
             </p>
             <button
               onClick={() => {
                 setSearchQuery("");
                 setSelectedCategory("All Updates");
+                setSelectedArchive(null);
               }}
               className="px-5 py-2 rounded-full bg-sky-400 text-white text-xs font-bold hover:bg-sky-500 transition-colors"
             >
@@ -329,6 +472,44 @@ export default function BlogSection({ initialArticles = [] }) {
           </div>
         )}
       
+        {/* Bottom Sky-Blue Social Banner */}
+        <div className="relative mt-16 sm:mt-20 rounded-3xl bg-sky-400 p-8 sm:p-10 lg:p-12 text-white shadow-xl shadow-sky-200/50 dark:shadow-none overflow-hidden">
+          {/* Subtle Organic Background Patterns */}
+          <div className="absolute -top-12 -right-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-sky-300/30 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
+            <div className="space-y-3 text-center lg:text-left max-w-2xl">
+              <h3 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight">
+                {blog.bannerTitle}
+              </h3>
+              <p className="text-sky-100 text-sm sm:text-base leading-relaxed">
+                {blog.bannerSubtitle}
+              </p>
+            </div>
+
+            {/* Social Action Buttons */}
+            <div className="flex flex-wrap items-center gap-4 flex-shrink-0">
+              <a
+                href={brand.socials.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-8 py-3.5 rounded-full bg-white hover:bg-slate-50 text-rose-500 font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95"
+              >
+                Instagram
+              </a>
+              <a
+                href={brand.socials.tiktok}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-8 py-3.5 rounded-full bg-slate-900 hover:bg-black text-white font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95"
+              >
+                TikTok
+              </a>
+            </div>
+          </div>
+        </div>
+
         {/* Full Article Reader Modal */}
         <BlogDetailModal
           article={selectedArticle}
